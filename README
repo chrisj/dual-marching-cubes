@@ -1,0 +1,1 @@
+emcc -O2 --memory-init-file 0 dmc.c -o dmc.js -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS="['_dual_marching_cubes']" -s TOTAL_MEMORY=134742016
