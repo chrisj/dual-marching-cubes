@@ -36,7 +36,7 @@ class MCWorker {
         }
     }
 
-    loadVolume(volume, bbox) {
+    loadVolume(volume, bbox = null) {
         return this._sendMessage('volume', {
             segmentation_buffer: volume.buffer,
             bbox: bbox
@@ -58,23 +58,87 @@ class MCWorker {
     }
 }
 
+let segmentation;
+
+// function segSet (x, y, z, val) {
+//     segmentation[x + y * 256 + z * 256 * 256] = val;
+// }
+
+// segSet(1,1,1,1);
+
+
+const body = document.querySelector('body');
+
+
+const renderer = new THREE.WebGLRenderer();
+
+// Set the scene size.
+const WIDTH = window.innerWidth;
+const HEIGHT = window.innerHeight;
+
+// Set some camera attributes.
+const VIEW_ANGLE = 45;
+const ASPECT = WIDTH / HEIGHT;
+const NEAR = 0.1;
+const FAR = 100;
+
+const camera =
+    new THREE.PerspectiveCamera(
+        VIEW_ANGLE,
+        ASPECT,
+        NEAR,
+        FAR
+);
+camera.position.z = 3;
+
+const scene = new THREE.Scene();
+
+scene.add(camera);
+
+const pointLight = new THREE.PointLight(0xFFFFFF);
+
+pointLight.position.x = 10;
+		pointLight.position.y = 50;
+		pointLight.position.z = 130;
+
+		// add to the scene
+		scene.add(pointLight);
+
+renderer.setSize(WIDTH, HEIGHT);
+
+body.appendChild(renderer.domElement);
+
 
 let myWorker = new MCWorker();
 
-let segmentation = new Uint16Array(256 * 256 * 256);
+// load segmentation
+fetch('./volume/segmentation').then((data) => {
+    return data.arrayBuffer();
+}).then((ab) => {
+    segmentation = new Uint16Array(ab);
+}).then(() => {
+    // load segmentation
+    return myWorker.loadVolume(segmentation);
+}).then((returned_segmentation) => {
+    // receive segmentation
+    // generate mesh
+    segmentation = returned_segmentation;
+    return myWorker.generateMesh(910);
+}).then(({triangles, positions, normals}) => {
+    // generate geometry
+    const geo = new THREE.BufferGeometry();
+    geo.setIndex( new THREE.BufferAttribute(triangles, 1 ) );
+    geo.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.addAttribute('normal', new THREE.BufferAttribute(normals, 3));
+    geo.normalizeNormals();
 
-function segSet (x, y, z, val) {
-    segmentation[x + y * 256 + z * 256 * 256] = val;
-}
+    return geo;
+}).then((geo) => {
+    // generate mesh, add to scene
+    const material = new THREE.MeshLambertMaterial( { color: 0xffffff } );
 
-segSet(1,1,1,1);
-
-// segmentation is now bad
-myWorker.loadVolume(segmentation, new Uint8Array([
-    0,0,0,0,0,0,1,1,1,2,2,2
-])).then((returned_segmentation) => {
-    segmentation = returned_segmentation; // segmentation good again
-    myWorker.generateMesh(1).then(({triangles, positions, normals}) => {
-        console.log(triangles, positions, normals);
-    });
+    let mesh = new THREE.Mesh(geo, material);
+    mesh.rotateY(Math.PI / 4);
+    scene.add(mesh);
+    renderer.render(scene, camera);
 });

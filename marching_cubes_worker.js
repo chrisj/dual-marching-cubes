@@ -1,4 +1,3 @@
-// uses marching_cubes.cpp, already compiled to marching_cubes.js (ASM.js)
 importScripts('./dmc.js');
 
 let pixelToSegIdPtr;
@@ -56,13 +55,13 @@ function setVolumeData(segmentation_buffer, bboxs, callback) {
     }
 
 	// top z layer
-	for (let z = Z_DIM - 1; z <= Z_DIM - 1; z++) {
-        for (let y = 0; y < Y_DIM; y++) {
-            for (let x = 0; x < X_DIM ; x++) {
-                segInHeap[x + y * X_DIM + z * X_DIM * Y_DIM] = 0;
-            }
-        }
-    }
+	// for (let z = Z_DIM - 1; z <= Z_DIM - 1; z++) {
+    //     for (let y = 0; y < Y_DIM; y++) {
+    //         for (let x = 0; x < X_DIM ; x++) {
+    //             segInHeap[x + y * X_DIM + z * X_DIM * Y_DIM] = 0;
+    //         }
+    //     }
+    // }
 
 	postMessage({ id: callback, msg: { segmentation_buffer: segmentation_buffer } }, [segmentation_buffer]);
 }
@@ -88,16 +87,19 @@ function readStruct (ptr, structType) {
 }
 
 function generateMeshForSegId(segId, callback) {
-	let bbox;
-	bbox = boundingBoxes.slice(segId*6, segId*6+6);
+	let bbox = [1, 1, 1, X_DIM - 2, Y_DIM - 2, Z_DIM - 2];
+	
+	if (boundingBoxes) {
+		bbox = boundingBoxes.slice(segId*6, segId*6+6);
 
-	bbox[0] = Math.max(1, bbox[0]);
-	bbox[1] = Math.max(1, bbox[1]);
-	bbox[2] = Math.max(1, bbox[2]);
+		bbox[0] = Math.max(1, bbox[0]);
+		bbox[1] = Math.max(1, bbox[1]);
+		bbox[2] = Math.max(1, bbox[2]);
 
-	bbox[3] = Math.min(X_DIM - 2, bbox[3]);
-	bbox[4] = Math.min(Y_DIM - 2, bbox[4]);
-	bbox[5] = Math.min(Z_DIM - 2, bbox[5]);
+		bbox[3] = Math.min(X_DIM - 2, bbox[3]);
+		bbox[4] = Math.min(Y_DIM - 2, bbox[4]);
+		bbox[5] = Math.min(Z_DIM - 2, bbox[5]);
+	}
 
 
 	let structPtr = _dual_marching_cubes(pixelToSegIdPtr, segId, bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5], 1);
